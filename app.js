@@ -2,14 +2,14 @@ let map;
 let currentMarker;
 let isMapInitialized = false;
 
-// 1. 各地点のデータ
+// 1. 各地点のデータ（Pythonのspots.jsonのキーと完全一致させます）
 const translationPoints = [
     {
         name: "東京情報大学5号館",
+        location_key: "tokyo_johodai_5",
         lat: 35.6369279,
         lng: 140.2020905,
         radius: 100,
-        text: "【東京情報大学付近を走行中】ここは東京情報大学5号館です。木曜のマッキンゼミはここで開催されます。",
         spots: [
             { category: "施設", name: "情報大 5号館講義室", distance: "0m" },
             { category: "グルメ", name: "学食（ポプラ）", distance: "120m" },
@@ -18,10 +18,10 @@ const translationPoints = [
     },
     {
         name: "自宅",
+        location_key: "ichihara_shiku",
         lat: 35.508572, 
         lng: 140.071769, 
         radius: 100,
-        text: "かのちゃん家。",
         spots: [
             { category: "歴史", name: "姉崎二子塚古墳", distance: "4.7km" },
             { category: "グルメ", name: "田中屋", distance: "1.7km" },
@@ -30,10 +30,10 @@ const translationPoints = [
     },
     {
         name: "地点C（ゴール周辺）",
+        location_key: "ginza_shiku",
         lat: 35.671989, 
         lng: 139.764632, 
         radius: 100,
-        text: "【地点C付近を走行中】目的地周辺の繁華街に入りました。ここは近代化の先駆けとなった場所で、レトロな西洋建築と現代のビルが融合した独特の景観が特徴です。",
         spots: [
             { category: "景勝地", name: "ガス灯通りの洋館", distance: "80m" },
             { category: "グルメ", name: "老舗の喫茶ブラン", distance: "150m" },
@@ -48,6 +48,46 @@ const defaultSpots = [
     { category: "なし", name: "周辺情報はありません", distance: "- m" },
     { category: "なし", name: "周辺情報はありません", distance: "- m" }
 ];
+
+// 【Python連動】サーバーから観光テキストと選曲タグを取得して画面に分配する関数
+async function fetchRagGuide(locationKey) {
+    const translationElement = document.getElementById('translationText');
+    // 🛠️ index.htmlのクラス名（.track-title, .track-artist）に合わせて修正
+    const bgmTitleElement = document.querySelector('.track-title'); 
+    const bgmArtistElement = document.querySelector('.track-artist'); 
+
+    translationElement.textContent = "🔄 周辺の観光情報を読み込み中...";
+    if (bgmTitleElement) bgmTitleElement.textContent = "🔄 AI選曲中...";
+
+    try {
+        // 🛠️ URLのバグを修正
+        const response = await fetch('http://127.0.0.1:8000/api/guide', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ location_key: locationKey })
+        });
+        
+        const data = await response.json();
+        
+        // ① 観光サイトの文章（データ）を「LANDSCAPE TRANSLATION」に表示
+        translationElement.textContent = data.sightseeing_text;
+        
+        // ② Geminiが考えた選曲を「BGM SUGGESTION」の枠に表示
+        if (bgmTitleElement) {
+            bgmTitleElement.textContent = data.bgm_genre; 
+        }
+        if (bgmArtistElement) {
+            bgmArtistElement.textContent = "Selected by Gemini RAG"; 
+        }
+        
+    } catch (error) {
+        console.error("サーバー通信エラー:", error);
+        translationElement.textContent = "❌ 観光情報の取得に失敗しました。";
+        if (bgmTitleElement) bgmTitleElement.textContent = "通信エラー";
+    }
+}
 
 // 2点間の直線距離（メートル）を計算する関数
 function getDistance(lat1, lng1, lat2, lng2) {
@@ -79,6 +119,9 @@ function updateSpotsCarousel(spotsArray) {
     carousel.innerHTML = htmlContent;
 }
 
+// 最後に通信した場所のキーを記憶（何度も同じ場所でAPIを叩かないようにする対策）
+let lastLocationKey = "";
+
 // 現在地をチェックして画面をアップデートするメイン処理
 function checkLocation(position) {
     const currentLat = position.coords.latitude;
@@ -108,21 +151,41 @@ function checkLocation(position) {
         currentMarker.setLatLng([currentLat, currentLng]);
     }
 
-    let matchedText = defaultText;
+    let inRange = false;
     let matchedSpots = defaultSpots;
 
     for (const point of translationPoints) {
         const distance = getDistance(currentLat, currentLng, point.lat, point.lng);
         
         if (distance <= point.radius) {
-            matchedText = point.text;
+            inRange = true;
             matchedSpots = point.spots;
+            
+            // 新しくその場所に入ったときだけサーバーにリクエストする
+            if (lastLocationKey !== point.location_key) {
+                lastLocationKey = point.location_key;
+                fetchRagGuide(point.location_key);
+            }
             break;
         }
     }
 
-    document.getElementById('translationText').textContent = matchedText;
-    updateSpotsCarousel(matchedSpots);
+    // どの範囲からも外れたらデフォルト表示に戻す
+    if (!inRange) {
+        if (lastLocationKey !== "") {
+            lastLocationKey = "";
+            document.getElementById('translationText').textContent = defaultText;
+            
+            // 🛠️ クラス名をindex.htmlに合わせて修正
+            const bgmTitleElement = document.querySelector('.track-title');
+            const bgmArtistElement = document.querySelector('.track-artist');
+            if (bgmTitleElement) bgmTitleElement.textContent = "Brick Quarter Nostalgia";
+            if (bgmArtistElement) bgmArtistElement.textContent = "Ambient Synced Track";
+        }
+        updateSpotsCarousel(defaultSpots);
+    } else {
+        updateSpotsCarousel(matchedSpots);
+    }
 }
 
 // エラーハンドリング
