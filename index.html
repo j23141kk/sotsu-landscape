@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>モックアップ</title>
+        <title>モックアップ1-2 (周辺スポット連動)</title>
         <style>
             :root {
                 --bg-color: #f4f6f9;
@@ -117,6 +117,7 @@
                 border-radius: 8px;
                 padding: 12px;
                 border: 1px solid #eaedf1;
+                transition: all 0.3s ease;
             }
 
             /* カテゴリバッジ */
@@ -133,6 +134,8 @@
             .cat-景勝地 { background: #e3f2fd; color: #1565c0; }
             .cat-グルメ { background: #ffe7e0; color: #ef4000; }
             .cat-道の駅 { background: #f3e5f5; color: #7b1fa2; }
+            .cat-施設 { background: #e0f7fa; color: #006064; }
+            .cat-なし { background: #f5f5f5; color: #9e9e9e; }
 
             .spot-name {
                 font-size: 0.95rem;
@@ -210,7 +213,6 @@
             </header>
 
             <main>
-                <!-- 走行環境 / マップ -->
                 <section class="card">
                     <div class="card-title">LIVE MAP</div>
                     <div class="map-area">
@@ -221,37 +223,19 @@
                     </div>
                 </section>
                 
-                <!-- 周辺スポット -->
                 <section class="card">
                     <div class="card-title">NEARBY SPOTS</div>
                     <div class="spots-carousel" id="spotsCarousel">
-                        <div class="spot-card">
-                            <span class="spot-category cat-歴史">歴史</span>
-                            <div class="spot-name">赤レンガ倉庫跡碑</div>
-                            <div class="spot-distance">📍 現在地から 150m</div>
                         </div>
-                        <div class="spot-card">
-                            <span class="spot-category cat-グルメ">グルメ</span>
-                            <div class="spot-name">港町のみなと食堂</div>
-                            <div class="spot-distance">📍 現在地から 450m</div>
-                        </div>
-                        <div class="spot-card">
-                            <span class="spot-category cat-道の駅">道の駅</span>
-                            <div class="spot-name">道の駅 ベイサイドみなと</div>
-                            <div class="spot-distance">📍 現在地から 1.2km</div>
-                        </div>
-                    </div>
                 </section>
                 
-                <!-- 風景翻訳 -->
                 <section class="card">
                     <div class="card-title">LANDSCAPE TRANSLATION</div>
-                    <div class="translation-text">
-                        「右手に広がる古い赤レンガの倉庫街は、かつて港の発展を支えた歴史の面影を残しています。現在の穏やかな海風と調和するような、ノスタルジックな雰囲気が漂っています。」
+                    <div class="translation-text" id="translationText">
+                        走行中...。歴史や文化のあるスポットに近づくと、ここに自動で『風景翻訳』のテキストが表示されます。
                     </div>
                 </section>
 
-                <!-- BGM -->
                 <section class="card">
                     <div class="card-title">BGM SUGGESTION</div>
                     <div class="music-player">
@@ -271,39 +255,60 @@
                 J23141 Graduation Research Project Prototype
             </footer>
         </div>
+
         <script>
-            // 1. あらかじめ用意しておく「判定用の位置情報」と「風景翻訳テキスト」
-            // ※ 緯度・経度は、実際にテストする場所（あなたの大学や自宅周辺など）に書き換えてください。
+            // 1. 各地点のデータ（風景翻訳テキスト ＋ 周辺スポット3つのリスト）
             const translationPoints = [
                 {
                     name: "東京情報大学5号館",
-                    lat: 35.6369279, // 仮の緯度（例: 東京駅付近）35.6369279,140.2020905
-                    lng: 140.2020905, // 仮の経度
-                    radius: 100,     // 判定半径（メートル）
-                    text: "【東京情報大学付近を走行中】ここは東京情報大学5号館です。木曜のマッキンゼミはここで開催されます。"
+                    lat: 35.6369279,
+                    lng: 140.2020905,
+                    radius: 100,
+                    text: "【東京情報大学付近を走行中】ここは東京情報大学5号館です。木曜のマッキンゼミはここで開催されます。",
+                    // この地点に入ったときに表示する周辺スポット3つ
+                    spots: [
+                        { category: "施設", name: "情報大 5号館講義室", distance: "0m" },
+                        { category: "グルメ", name: "学食（ポプラ）", distance: "120m" },
+                        { category: "施設", name: "情報大 本部棟図書館", distance: "250m" }
+                    ]
                 },
                 {
                     name: "自宅",
                     lat: 35.508572, 
                     lng: 140.071769, 
                     radius: 100,
-                    text: "かのちゃん家。"   
+                    text: "かのちゃん家。",
+                    spots: [
+                        { category: "歴史", name: "姉崎二子塚古墳", distance: "4.7km" },
+                        { category: "グルメ", name: "田中屋", distance: "1.7km" },
+                        { category: "道の駅", name: "道の駅 あずの里・いちはら", distance: "7.6km" }
+                    ]
                 },
                 {
                     name: "地点C（ゴール周辺）",
                     lat: 35.671989, 
                     lng: 139.764632, 
                     radius: 100,
-                    text: "【地点C付近を走行中】目的地周辺の繁華街に入りました。ここは近代化の先駆けとなった場所で、レトロな西洋建築と現代のビルが融合した独特の景観が特徴です。"
+                    text: "【地点C付近を走行中】目的地周辺の繁華街に入りました。ここは近代化の先駆けとなった場所で、レトロな西洋建築と現代のビルが融合した独特の景観が特徴です。",
+                    spots: [
+                        { category: "景勝地", name: "ガス灯通りの洋館", distance: "80m" },
+                        { category: "グルメ", name: "老舗の喫茶ブラン", distance: "150m" },
+                        { category: "歴史", name: "近代建築記念碑", distance: "320m" }
+                    ]
                 }
             ];
 
-            // デフォルトのテキスト（どの地点の範囲内にも入っていない時の表示）
+            // どの地点の範囲内にも入っていない時のデフォルト表示データ
             const defaultText = "走行中...。歴史や文化のあるスポットに近づくと、ここに自動で『風景翻訳』のテキストが表示されます。";
+            const defaultSpots = [
+                { category: "なし", name: "周辺情報はありません", distance: "- m" },
+                { category: "なし", name: "周辺情報はありません", distance: "- m" },
+                { category: "なし", name: "周辺情報はありません", distance: "- m" }
+            ];
 
-            // 2. 2点間の直線距離（メートル）を計算する関数（ハバーサイン公式の簡易版）
+            // 2点間の直線距離（メートル）を計算する関数
             function getDistance(lat1, lng1, lat2, lng2) {
-                const R = 6371000; // 地球の半径（メートル）
+                const R = 6371000;
                 const dLat = (lat2 - lat1) * Math.PI / 180;
                 const dLng = (lng2 - lng1) * Math.PI / 180;
                 const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -313,52 +318,68 @@
                 return R * c;
             }
 
-            // 3. 現在地をチェックしてテキストを書き換えるメイン処理
+            // 周辺スポット（NEARBY SPOTS）のHTMLを書き換える関数
+            function updateSpotsCarousel(spotsArray) {
+                const carousel = document.getElementById('spotsCarousel');
+                if (!carousel) return;
+
+                let htmlContent = '';
+                spotsArray.forEach(spot => {
+                    htmlContent += `
+                        <div class="spot-card" style="${spot.category === 'なし' ? 'opacity: 0.5;' : ''}">
+                            <span class="spot-category cat-${spot.category}">${spot.category}</span>
+                            <div class="spot-name">${spot.name}</div>
+                            <div class="spot-distance">📍 ${spot.distance}</div>
+                        </div>
+                    `;
+                });
+                carousel.innerHTML = htmlContent;
+            }
+
+            // 現在地をチェックして画面をアップデートするメイン処理
             function checkLocation(position) {
                 const currentLat = position.coords.latitude;
                 const currentLng = position.coords.longitude;
 
-                // MAPエリアの表示を、本物の緯度経度の数値に更新（入力の可視化）
+                // LIVE MAPエリアの座標を更新
                 const mapPlaceholder = document.querySelector('.map-placeholder');
                 if (mapPlaceholder) {
                     mapPlaceholder.innerHTML = `📍 GPS信号受信中<br><span style="font-size: 0.8rem; color: #666;">Lat: ${currentLat.toFixed(6)}<br>Lng: ${currentLng.toFixed(6)}</span>`;
                 }
 
                 let matchedText = defaultText;
+                let matchedSpots = defaultSpots;
 
-                // 登録した地点を順番にチェック
+                // 登録地点のチェック
                 for (const point of translationPoints) {
                     const distance = getDistance(currentLat, currentLng, point.lat, point.lng);
                     
-                    // 設定した半径（100m）以内に入っているか判定
                     if (distance <= point.radius) {
                         matchedText = point.text;
-                        break; // 最初に見つかった地点のテキストを表示してループを抜ける
+                        matchedSpots = point.spots;
+                        break;
                     }
                 }
 
-                // 出力：LANDSCAPE TRANSLATION のテキストを書き換え
-                const translationTextDiv = document.querySelector('.translation-text');
-                if (translationTextDiv) {
-                    translationTextDiv.textContent = matchedText;
-                }
+                // 画面への出力反映
+                document.getElementById('translationText').textContent = matchedText;
+                updateSpotsCarousel(matchedSpots);
             }
 
             // エラーハンドリング
             function handleError(error) {
                 console.error("GPSエラー:", error);
-                const translationTextDiv = document.querySelector('.translation-text');
-                if (translationTextDiv) {
-                    translationTextDiv.textContent = "GPSの取得に失敗しました。位置情報サービスが許可されているか確認してください。";
-                }
+                document.getElementById('translationText').textContent = "GPSの取得に失敗しました。位置情報サービスが許可されているか確認してください。";
             }
 
-            // 4. ページ読み込み時にGPSの監視を開始（1秒ごとに自動で現在地を取得）
+            // ページ読み込み時の初期化
             window.onload = function() {
+                // 最初にデフォルトの空スポットを表示しておく
+                updateSpotsCarousel(defaultSpots);
+
                 if (navigator.geolocation) {
-                    // watchPositionを使うことで、移動に合わせて自動で何度もcheckLocationが走ります
                     navigator.geolocation.watchPosition(checkLocation, handleError, {
-                        enableHighAccuracy: true, // 高精度モード
+                        enableHighAccuracy: true,
                         maximumAge: 0,
                         timeout: 5000
                     });
