@@ -19,8 +19,8 @@ const translationPoints = [
     {
         name: "自宅",
         location_key: "ichihara_shiku",
-        //lat: 35.508572, 
-        //lng: 140.071769, 
+        lat: 35.508572, 
+        lng: 140.071769, 
         radius: 100,
         spots: [
             { category: "歴史", name: "姉崎二子塚古墳", distance: "4.7km" },
