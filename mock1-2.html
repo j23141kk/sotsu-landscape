@@ -256,12 +256,12 @@
         </div>
 
         <script>
-            // 【追加3】地図と現在地マーカーを入れる変数をグローバルで用意
+            // 地図と現在地マーカーを入れる変数をグローバルで用意
             let map;
             let currentMarker;
             let isMapInitialized = false;
 
-            // 1. 各地点のデータ
+            // 各地点のデータ
             const translationPoints = [
                 {
                     name: "東京情報大学5号館",
@@ -277,10 +277,10 @@
                 },
                 {
                     name: "自宅",
-                    lat: 35.508572, 
-                    lng: 140.071769, 
+                    lat: null, 
+                    lng: null, 
                     radius: 100,
-                    text: "    。",
+                    text: " かのちゃん家。",
                     spots: [
                         { category: "歴史", name: "姉崎二子塚古墳", distance: "4.7km" },
                         { category: "グルメ", name: "田中屋", distance: "1.7km" },
@@ -343,10 +343,15 @@
                 const currentLat = position.coords.latitude;
                 const currentLng = position.coords.longitude;
 
-                // 【修正・追加4】GPS受信時に地図を初期化、または現在地へ動かす処理
+                // GPS受信時に地図を初期化、または現在地へ動かす処理
                 if (!isMapInitialized) {
                     // 地図を初めて作成（最初のGPS座標を中心に、ズームレベル15で初期化）
                     map = L.map('map').setView([currentLat, currentLng], 15);
+
+                    if (translationPoints[1].lat === null) {
+                        translationPoints[1].lat = currentLat;
+                        translationPoints[1].lng = currentLng;
+                    }
 
                     // OpenStreetMapの地図タイル（背景）を読み込んで追加
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
